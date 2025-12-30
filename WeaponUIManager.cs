@@ -6,83 +6,40 @@ public class WeaponUIManager : MonoBehaviour
     public RawImage fistsImage;   
     public RawImage swordImage;  
     public Text fistsText;   
-    public Text swordText;   
-    private CavePlayerBehaviour cavePlayer; 
-    private PlayerBehaviour firstPlayer;  
+    public Text swordText;
     
     private void Start()
     {
-        cavePlayer = FindObjectOfType<CavePlayerBehaviour>();
-        firstPlayer = FindObjectOfType<PlayerBehaviour>();
-        UpdateWeaponUI();
+        UpdateUI(-1);
     }
 
-    public void UpdateWeaponUI()
+    private void OnEnable()
     {
-        if (cavePlayer != null)
-        {
-            fistsImage.enabled = cavePlayer.hasFists;
-            swordImage.enabled = cavePlayer.hasSword;
-            fistsText.enabled = cavePlayer.hasFists;
-            swordText.enabled = cavePlayer.hasSword;
-
-            UpdateWeaponOpacity(cavePlayer.currentWeapon);
-        }
-        else if (firstPlayer != null)
-        {
-            fistsImage.enabled = firstPlayer.hasFists;
-            swordImage.enabled = firstPlayer.hasSword;
-            fistsText.enabled = firstPlayer.hasFists;
-            swordText.enabled = firstPlayer.hasSword;
-
-            UpdateWeaponOpacity(firstPlayer.currentWeapon);
-        }
+        EventManager.OnWeaponSwitched += UpdateUI;
     }
 
-    private void UpdateWeaponOpacity(CavePlayerBehaviour.WeaponType currentWeapon)
+    private void OnDisable()
     {
-        Color fullColor = new Color(1f, 1f, 1f, 1f);  
+        EventManager.OnWeaponSwitched -= UpdateUI;
+    }
+
+    public void UpdateUI(int currentWeaponType)
+    {
+        bool hasFists = PersistentObjectManager.instance.hasFists;
+        bool hasSword = PersistentObjectManager.instance.hasSword;
+
+        fistsImage.enabled = hasFists;
+        swordImage.enabled = hasSword;
+        fistsText.enabled = hasFists;
+        swordText.enabled = hasSword;
+
+        Color fullColor = new Color(1f, 1f, 1f, 1f);
         Color fadedColor = new Color(1f, 1f, 1f, 0.5f); 
 
-        if (cavePlayer != null)
-        {
-            if (cavePlayer.hasFists)
-            {
-                fistsImage.color = (currentWeapon == CavePlayerBehaviour.WeaponType.Fists) ? fullColor : fadedColor;
-                fistsText.color = (currentWeapon == CavePlayerBehaviour.WeaponType.Fists) ? fullColor : fadedColor;
-            }
+        fistsImage.color = (currentWeaponType == 0) ? fullColor : fadedColor;
+        fistsText.color = (currentWeaponType == 0) ? fullColor : fadedColor;
 
-            if (cavePlayer.hasSword)
-            {
-                swordImage.color = (currentWeapon == CavePlayerBehaviour.WeaponType.Sword) ? fullColor : fadedColor;
-                swordText.color = (currentWeapon == CavePlayerBehaviour.WeaponType.Sword) ? fullColor : fadedColor;
-            }
-        }
-    }
-
-    private void UpdateWeaponOpacity(PlayerBehaviour.WeaponType currentWeapon)
-    {
-        Color fullColor = new Color(1f, 1f, 1f, 1f); 
-        Color fadedColor = new Color(1f, 1f, 1f, 0.5f); 
-
-        if (firstPlayer != null)
-        {
-            if (firstPlayer.hasFists)
-            {
-                fistsImage.color = (currentWeapon == PlayerBehaviour.WeaponType.Fists) ? fullColor : fadedColor;
-                fistsText.color = (currentWeapon == PlayerBehaviour.WeaponType.Fists) ? fullColor : fadedColor;
-            }
-
-            if (firstPlayer.hasSword)
-            {
-                swordImage.color = (currentWeapon == PlayerBehaviour.WeaponType.Sword) ? fullColor : fadedColor;
-                swordText.color = (currentWeapon == PlayerBehaviour.WeaponType.Sword) ? fullColor : fadedColor;
-            }
-        }
-    }
-
-    private void Update()
-    {
-        UpdateWeaponUI(); 
+        swordImage.color = (currentWeaponType == 1) ? fullColor : fadedColor;
+        swordText.color = (currentWeaponType == 1) ? fullColor : fadedColor;
     }
 }

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+
 public class PortalBehaviour : MonoBehaviour
 {
     public string targetSceneName; 
@@ -11,24 +12,27 @@ public class PortalBehaviour : MonoBehaviour
 
     private void Start()
     {
-        Color color = fadeImage.color;
-        color.a = 0; 
-        fadeImage.color = color;
-        fadeImage.gameObject.SetActive(true); 
+        if (fadeImage != null)
+        {
+            Color color = fadeImage.color;
+            color.a = 0; 
+            fadeImage.color = color;
+            fadeImage.gameObject.SetActive(true); 
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player")) 
         {
-            PersistentObjectManager.instance.GetLastScene();
-            SceneManager.LoadScene(targetSceneName); 
-            MissionManager missionManager = FindObjectOfType<MissionManager>();
-
-            if (missionManager != null)
+            
+            if (PersistentObjectManager.instance != null)
             {
-                missionManager.TriggerNextMission();
+                PersistentObjectManager.instance.GetLastScene(); 
             }
+
+            
+            EventManager.TriggerMissionAdvanced();
 
             StartCoroutine(TransitionToScene());
         }
@@ -36,8 +40,9 @@ public class PortalBehaviour : MonoBehaviour
 
     private IEnumerator TransitionToScene()
     {
-        yield return Fade(1); 
+        yield return Fade(1);
 
+        
         if (SceneManager.GetActiveScene().buildIndex == 0)
         {
             SceneManager.LoadScene(1);
@@ -45,6 +50,10 @@ public class PortalBehaviour : MonoBehaviour
         else if (SceneManager.GetActiveScene().buildIndex == 1)
         {
             SceneManager.LoadScene(0);
+        }
+        else if (!string.IsNullOrEmpty(targetSceneName))
+        {
+            SceneManager.LoadScene(targetSceneName);
         }
 
         yield return Fade(0);

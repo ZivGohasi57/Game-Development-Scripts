@@ -38,12 +38,10 @@ public class PlayerBehaviour : MonoBehaviour
     public bool HasChangedClothes = false;
     public int documentsCollected = 0;
     public GameObject sword_in_hand;
-
     private bool isInCombatMode = false; 
     private int clickCount = 0;
     private float lastClickTime = 0;
     private float timeBetweenClicks = 0.3f;
-
     public bool InteractionCompleted { get { return interactionCompleted; } }
 
     public enum WeaponType { None = -1, Fists = 0, Sword = 1 } 
@@ -70,21 +68,28 @@ public class PlayerBehaviour : MonoBehaviour
     float combatWalkSpeed = 5f;
     public AudioSource backAudioSource; 
 
-
-  
     void Start()
     {
-	int savedWeaponType = PersistentObjectManager.instance.weaponType;
-        currentWeapon = (WeaponType)savedWeaponType;
-        animator.SetInteger("WeaponType", savedWeaponType);
-	SwitchWeapon(currentWeapon);	
-	if (currentWeapon == WeaponType.Sword && hasSword)
+        
+        if (PersistentObjectManager.instance != null)
         {
-            sword_in_hand.SetActive(true);  
-        }
-        else
-        {
-            sword_in_hand.SetActive(false); 
+            int savedWeaponType = PersistentObjectManager.instance.weaponType;
+            currentWeapon = (WeaponType)savedWeaponType;
+            animator.SetInteger("WeaponType", savedWeaponType);
+            SwitchWeapon(currentWeapon);    
+            
+            if (currentWeapon == WeaponType.Sword && PersistentObjectManager.instance.hasSword)
+            {
+                sword_in_hand.SetActive(true);
+            }
+            else
+            {
+                sword_in_hand.SetActive(false);
+            }
+            
+            sword_in_hand.SetActive(PersistentObjectManager.instance.hasSwordInHand);
+            hasFists = PersistentObjectManager.instance.hasFists;
+            hasSword = PersistentObjectManager.instance.hasSword;
         }
 
         controller = GetComponent<CharacterController>();
@@ -95,9 +100,6 @@ public class PlayerBehaviour : MonoBehaviour
 
         cameraOffset = playerCamera.transform.position - cameraTarget.position;
         SceneManager.sceneLoaded += OnSceneLoaded;
-        sword_in_hand.SetActive(PersistentObjectManager.instance.hasSwordInHand);
-	hasFists = PersistentObjectManager.instance.hasFists;
-        hasSword = PersistentObjectManager.instance.hasSword;
     }
 
     void OnDestroy()
@@ -110,7 +112,6 @@ public class PlayerBehaviour : MonoBehaviour
         if (PersistentObjectManager.instance != null)
         {
             int weaponType = PersistentObjectManager.instance.weaponType;
-
             animator.SetInteger("WeaponType", weaponType);
         }
     }
@@ -136,28 +137,23 @@ public class PlayerBehaviour : MonoBehaviour
         currentYaw += mouseX;
         currentPitch -= mouseY;
         currentPitch = Mathf.Clamp(currentPitch, -verticalClampAngle, verticalClampAngle);
-
         Quaternion rotation = Quaternion.Euler(currentPitch, currentYaw, 0);
         Vector3 targetPosition = cameraTarget.position + rotation * cameraOffset;
-
         playerCamera.transform.position = Vector3.SmoothDamp(
             playerCamera.transform.position,
             targetPosition,
             ref cameraVelocity,
             0.1f
         );
-
         playerCamera.transform.LookAt(cameraTarget);
     }
 
     void HandleMovement()
     { 
-    	if (isAttacking) return;
-
+        if (isAttacking) return;
         float currentSpeed = isInCombatMode ? combatWalkSpeed : (Input.GetKey(KeyCode.LeftShift) ? runSpeed : speed);
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
-    
         Vector3 direction = new Vector3(horizontal, 0, vertical).normalized;
     
         if (direction.magnitude >= 0.1f)
@@ -165,7 +161,6 @@ public class PlayerBehaviour : MonoBehaviour
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + playerCamera.transform.eulerAngles.y;
             Quaternion targetRotation = Quaternion.Euler(0, targetAngle, 0);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10);
-    
             Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
             moveDirection.y = -1f; 
     
@@ -202,11 +197,11 @@ public class PlayerBehaviour : MonoBehaviour
             }
             else if (currentSpeed == runSpeed)
             {
-                footStepsAudioSource.pitch = 1.5f; 
+                footStepsAudioSource.pitch = 1.5f;
             }
             else
             {
-                footStepsAudioSource.pitch = 1.0f; 
+                footStepsAudioSource.pitch = 1.0f;
             }
         }
         else
@@ -231,7 +226,6 @@ public class PlayerBehaviour : MonoBehaviour
     IEnumerator PlaySelfTalkAfterDelay()
     {
         yield return new WaitForSeconds(3f);
-
         if (!selfTalkAudioSource.isPlaying && selfTalk1 != null)
         {
             selfTalkAudioSource.PlayOneShot(selfTalk1);
@@ -259,12 +253,8 @@ public class PlayerBehaviour : MonoBehaviour
             yield return null;
         }
         yield return new WaitForSeconds(0.5f);
-
-        MissionManager missionManagerRef = FindObjectOfType<MissionManager>();
-        if (missionManagerRef != null)
-        {
-            missionManagerRef.TriggerNextMission();
-        }
+        
+        EventManager.TriggerMissionAdvanced();
     }
 
     public void PlaySelfTalk3()
@@ -291,7 +281,6 @@ public class PlayerBehaviour : MonoBehaviour
     public void CollectDocument()
     {
         documentsCollected += 1;
-
         if (documentsCollected < 4)
         {
             selfTalkAudioSource.PlayOneShot(documentSound);
@@ -304,44 +293,40 @@ public class PlayerBehaviour : MonoBehaviour
 
     void HandleCombat()
     {
-        if (PersistentObjectManager.instance != null)
+        int weaponType = animator.GetInteger("WeaponType");
+        
+        if (Input.GetMouseButton(1))
         {
-            int weaponType = PersistentObjectManager.instance.weaponType;
-    
-            if (Input.GetMouseButton(1))
+            EnterCombatMode();
+        }
+        else if (Input.GetMouseButtonUp(1))
+        {
+            ExitCombatMode();
+        }
+
+        if (isInCombatMode && (currentWeapon == WeaponType.Fists || currentWeapon == WeaponType.Sword))
+        {
+            if (Input.GetMouseButtonDown(0))
             {
-                EnterCombatMode();
-            }
-            else if (Input.GetMouseButtonUp(1))
-            {
-                ExitCombatMode();
-            }
-    
-            if (isInCombatMode && (currentWeapon == WeaponType.Fists || currentWeapon == WeaponType.Sword))
-            {
-                if (Input.GetMouseButtonDown(0))
+                float timeSinceLastClick = Time.time - lastClickTime;
+                if (timeSinceLastClick <= timeBetweenClicks)
                 {
-                    float timeSinceLastClick = Time.time - lastClickTime;
-                    if (timeSinceLastClick <= timeBetweenClicks)
-                    {
-                        clickCount++;
-                    }
-                    else
-                    {
-                        clickCount = 1;
-                    }
-    
-                    lastClickTime = Time.time;
-    
-                    if (clickCount == 1)
-                    {
-                        ExecuteSingleAttack();
-                    }
-                    else if (clickCount == 2)
-                    {
-                        ExecuteComboAttack();
-                        clickCount = 0;
-                    }
+                    clickCount++;
+                }
+                else
+                {
+                    clickCount = 1;
+                }
+
+                lastClickTime = Time.time;
+                if (clickCount == 1)
+                {
+                    ExecuteSingleAttack();
+                }
+                else if (clickCount == 2)
+                {
+                    ExecuteComboAttack();
+                    clickCount = 0;
                 }
             }
         }
@@ -361,26 +346,26 @@ public class PlayerBehaviour : MonoBehaviour
 
     void ExecuteSingleAttack()
     {
-        isAttacking = true; 
-    	animator.SetTrigger("SingleAttack");
-    	StartCoroutine(AttackAnimationLock(1f)); 
+        isAttacking = true;
+        animator.SetTrigger("SingleAttack");
+        StartCoroutine(AttackAnimationLock(1f)); 
         StartCoroutine(ActivateAttackColliders()); 
-		
+        
         if (currentEnemy != null)
         {
-            AttackEnemy(currentEnemy, attackDamage); 
+            AttackEnemy(currentEnemy, attackDamage);
         }
     }
 
     void ExecuteComboAttack()
     {
-        isAttacking = true; 
+        isAttacking = true;
         animator.SetTrigger("ComboAttack");
         StartCoroutine(AttackAnimationLock(1f));
         StartCoroutine(ActivateAttackColliders()); 
         if (currentEnemy != null)
         {
-            AttackEnemy(currentEnemy, attackDamage); 
+            AttackEnemy(currentEnemy, attackDamage);
         }
     }
 
@@ -392,7 +377,7 @@ public class PlayerBehaviour : MonoBehaviour
 
     IEnumerator ActivateAttackColliders()
     {
-        EnableAllAttackColliders(); 
+        EnableAllAttackColliders();
         yield return new WaitForSeconds(0.5f); 
         DisableAllAttackColliders();
         isAttacking = false;
@@ -419,7 +404,7 @@ public class PlayerBehaviour : MonoBehaviour
         Enemy enemyScript = enemy.GetComponent<Enemy>();
         if (enemyScript != null)
         {
-            enemyScript.TakeDamage(damage); 
+            enemyScript.TakeDamage(damage);
         }
     }
 
@@ -439,10 +424,10 @@ public class PlayerBehaviour : MonoBehaviour
     {
         currentWeapon = weaponType;
         animator.SetInteger("WeaponType", (int)currentWeapon);
-        if (PersistentObjectManager.instance != null)
-        {
-            PersistentObjectManager.instance.SetWeaponType((int)weaponType);
-        }
+        
+        
+        EventManager.TriggerWeaponSwitched((int)weaponType);
+        
         if (currentWeapon == WeaponType.Sword)
         {
             sword_in_hand.SetActive(true);
@@ -455,7 +440,7 @@ public class PlayerBehaviour : MonoBehaviour
 
     void Die()
     {
-        animator.SetTrigger("Die"); 
+        animator.SetTrigger("Die");
         StartCoroutine(WaitForDeathAnimation());
     }
 
@@ -467,12 +452,9 @@ public class PlayerBehaviour : MonoBehaviour
         }
     }
 
-    
-
     IEnumerator WaitForDeathAnimation()
     {
         float deathAnimationTime = animator.GetCurrentAnimatorStateInfo(0).length;
-        
         yield return new WaitForSeconds(deathAnimationTime);
 
         yield return StartCoroutine(FadeOut(fadeDuration));
@@ -491,7 +473,7 @@ public class PlayerBehaviour : MonoBehaviour
             Enemy enemy = other.GetComponentInParent<Enemy>();
             if (enemy != null)
             {
-                TakeDamage(enemy.attackDamage); 
+                TakeDamage(enemy.attackDamage);
             }
         }
     }
@@ -500,11 +482,10 @@ public class PlayerBehaviour : MonoBehaviour
     {
         if (other.CompareTag("Enemy"))
         {
-            currentEnemy = null; 
+            currentEnemy = null;
         }
-        
     }
-	
+    
     IEnumerator FadeOut(float duration)
     {
         float currentTime = 0f;
@@ -521,50 +502,48 @@ public class PlayerBehaviour : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        currentHP -= damage; 
+        currentHP -= damage;
         if (currentHP < 0)
         {
             currentHP = 0;
         }
     
-        PersistentObjectManager.instance.SetPlayerHP(currentHP);
+        
+        EventManager.TriggerPlayerHealthChanged(currentHP);
 
         UpdateHPUI(); 
-	UpdateEdgeEffect();
-
+        UpdateEdgeEffect();
         if (currentHP == 0)
         {
-            Die(); 
+            Die();
         }
      }
-	
-	IEnumerator BlinkEdgeEffect()
+    
+    IEnumerator BlinkEdgeEffect()
+    {
+        isBlinking = true;
+        float blinkDuration = 0.5f; 
+        float minAlpha = 0f;
+        float maxAlpha = maxEdgeAlpha;
+        bool increasing = true;
+        while (currentHP <= lowHpThreshold) 
         {
-        	isBlinking = true;
-        	float blinkDuration = 0.5f; 
-       		float minAlpha = 0f;
-        	float maxAlpha = maxEdgeAlpha;
-        	bool increasing = true; 
+            float startAlpha = increasing ? minAlpha : maxAlpha;
+            float endAlpha = increasing ? maxAlpha : minAlpha;
+            float elapsedTime = 0f;
+            while (elapsedTime < blinkDuration)
+            {
+                float alpha = Mathf.Lerp(startAlpha, endAlpha, elapsedTime / blinkDuration);
+                SetEdgeEffect(alpha);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+            increasing = !increasing;
+        }
     
-        	while (currentHP <= lowHpThreshold) 
-        	{
-            		float startAlpha = increasing ? minAlpha : maxAlpha;
-            		float endAlpha = increasing ? maxAlpha : minAlpha;
-            		float elapsedTime = 0f;
-    
-            		while (elapsedTime < blinkDuration)
-            		{
-             		   	float alpha = Mathf.Lerp(startAlpha, endAlpha, elapsedTime / blinkDuration);
-                		SetEdgeEffect(alpha);
-                		elapsedTime += Time.deltaTime;
-                		yield return null;
-            		}
-           	 	increasing = !increasing; 
-        	}
-    
-        	SetEdgeEffect(0f); 
-        	isBlinking = false;
-	}
+        SetEdgeEffect(0f); 
+        isBlinking = false;
+    }
 
     void UpdateEdgeEffect()
     {
@@ -607,15 +586,13 @@ public class PlayerBehaviour : MonoBehaviour
 
     private IEnumerator TransitionToCredits()
     {
-        
         if (fadeImage != null)
         {
             fadeImage.color = new Color(0, 0, 0, 0);
             fadeImage.gameObject.SetActive(true);
 
             float fadeDuration = 4f;
-            float initialVolume = backAudioSource != null ? backAudioSource.volume : 0f; 
-
+            float initialVolume = backAudioSource != null ? backAudioSource.volume : 0f;
             for (float t = 0; t < fadeDuration; t += Time.deltaTime)
             {
                 float alpha = Mathf.Clamp01(t / fadeDuration);
@@ -634,7 +611,6 @@ public class PlayerBehaviour : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1f); 
-        SceneManager.LoadScene("Credits"); 
+        SceneManager.LoadScene("Credits");
     }
-
 }

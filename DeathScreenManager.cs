@@ -6,15 +6,14 @@ using System.Collections;
 public class DeathScreenManager : MonoBehaviour
 {
     private string lastSceneName;
-    public Button respown
-    public Button exit;  
+    public Button respown;
+    public Button exit;
     public Image fadeImage;
     public float fadeDuration = 1f; 
 
     void Start()
     {
         fadeImage.raycastTarget = false;
-
         lastSceneName = PlayerPrefs.GetString("LastScene", "DefaultScene");
 
         respown.onClick.AddListener(() => StartFadeAndRespawn());
@@ -41,8 +40,10 @@ public class DeathScreenManager : MonoBehaviour
         }
 
         lastSceneName = PersistentObjectManager.instance.GetLastScene();
-        PersistentObjectManager.instance.RespawnLife();
         
+        float respawnHP = 30f;
+        EventManager.TriggerPlayerHealthChanged(respawnHP);
+
         if (!string.IsNullOrEmpty(lastSceneName))
         {
             SceneManager.LoadScene(lastSceneName);

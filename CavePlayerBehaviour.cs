@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-
 public class CavePlayerBehaviour : MonoBehaviour
 {
     public GameObject playerCamera;
@@ -14,44 +13,35 @@ public class CavePlayerBehaviour : MonoBehaviour
     public GameObject sword_in_hand;
     public Text pickText;
     public Text openChestText;
-
     public AudioClip footStepsClip;
     public AudioSource footStepsAudioSource;
-
     public LayerMask enemyLayer;
     public List<Collider> attackColliders;
     public float attackDamage = 0; 
-
     CharacterController controller;
     float speed = 10f;
     float runSpeed = 20f;
     float combatWalkSpeed = 5f; 
     public float mouseSensitivity = 5f;
     public float verticalClampAngle = 45f;
-
     private bool isInCombatMode = false;
     private int clickCount = 0;
     private float lastClickTime = 0;
     private float timeBetweenClicks = 0.3f;
-
     private Vector3 cameraOffset;
     private float currentYaw = 0f;
     private float currentPitch = 0f;
     private Vector3 cameraVelocity = Vector3.zero;
-
     private GameObject currentJar;  
     private GameObject currentEnemy; 
     public float maxHP = 100f;      
     public float currentHP;          
     public Slider hpSlider;        
-
-    public int weaponType; 
+    public int weaponType;
     public float damage;  
     public Image fadeImage; 
     public float fadeDuration = 1f;
-
     private string currentSceneName = "CaveScene";   
-
     public Image topEdge;
     public Image bottomEdge;
     public Image leftEdge;
@@ -59,75 +49,47 @@ public class CavePlayerBehaviour : MonoBehaviour
     public float lowHpThreshold = 40f;
     public float maxEdgeAlpha = 0.5f;
     private bool isBlinking = false;
-
     public enum WeaponType { None = -1, Fists = 0, Sword = 1 }
-
     public WeaponType currentWeapon = WeaponType.None;
     public bool hasFists = false; 
     public bool hasSword = false;
     public bool isAttacking = false;
-	public AudioClip voiceSword;
-	public AudioClip voiceForest;
-	public AudioSource audioSource;
-	public Color normalColor = Color.green; 
+    public AudioClip voiceSword;
+    public AudioClip voiceForest;
+    public AudioSource audioSource;
+    public Color normalColor = Color.green; 
     public Color lowHpColor = Color.yellow; 
     public Color criticalHpColor = Color.red; 
     private Coroutine healthRegenCoroutine; 
 
-
-	
-
-
-    void Awake()
-    {
-	}
-
     void Start()
     {
-        PersistentObjectManager.instance.SetLastScene(currentSceneName);
-		hasFists = PersistentObjectManager.instance.hasFists;
-        hasSword = PersistentObjectManager.instance.hasSword;
+        if(PersistentObjectManager.instance != null)
+        {
+            PersistentObjectManager.instance.SetLastScene(currentSceneName);
+            hasFists = PersistentObjectManager.instance.hasFists;
+            hasSword = PersistentObjectManager.instance.hasSword;
+            int savedWeaponType = PersistentObjectManager.instance.weaponType;
+            currentWeapon = (WeaponType)savedWeaponType;
+            SwitchWeapon(currentWeapon);
+            sword_in_hand.SetActive(PersistentObjectManager.instance.hasSwordInHand);
+            sword.SetActive(PersistentObjectManager.instance.hasSwordOnWall);
+            animator.SetInteger("WeaponType", savedWeaponType);
+        }
 
         controller = GetComponent<CharacterController>();
- 		
-        int savedWeaponType = PersistentObjectManager.instance.weaponType;
-        currentWeapon = (WeaponType)savedWeaponType;
-        SwitchWeapon(currentWeapon);	
-        if (currentWeapon == WeaponType.Sword && hasSword)
-        {
-            sword_in_hand.SetActive(true); 
-        }
-        else
-        {
-            sword_in_hand.SetActive(false); 
-        }
-
-
-        if (footStepsAudioSource == null)
-
-        if (animator == null)
 
         if (footStepsAudioSource != null && footStepsClip != null)
             footStepsAudioSource.clip = footStepsClip;
 
         cameraOffset = playerCamera.transform.position - cameraTarget.position;
-
         pickText.gameObject.SetActive(false);
         openChestText.gameObject.SetActive(false);
-
-        if (PersistentObjectManager.instance != null)
-        {
-            sword_in_hand.SetActive(PersistentObjectManager.instance.hasSwordInHand);
-            sword.SetActive(PersistentObjectManager.instance.hasSwordOnWall);
-            animator.SetInteger("WeaponType", PersistentObjectManager.instance.weaponType);
-			
-        }
         DisableAllAttackColliders();
-		currentHP = maxHP;    
-        UpdateHPUI();    
+        currentHP = maxHP;    
+        UpdateHPUI();
     }
     
-
     void Update()
     {
         HandleMovement();
@@ -145,28 +107,18 @@ public class CavePlayerBehaviour : MonoBehaviour
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
-
         currentYaw += mouseX;
         currentPitch -= mouseY;
         currentPitch = Mathf.Clamp(currentPitch, -verticalClampAngle, verticalClampAngle);
-
         Quaternion rotation = Quaternion.Euler(currentPitch, currentYaw, 0);
         Vector3 targetPosition = cameraTarget.position + rotation * cameraOffset;
-
-        playerCamera.transform.position = Vector3.SmoothDamp(
-            playerCamera.transform.position, 
-            targetPosition, 
-            ref cameraVelocity, 
-            0.1f
-        );
-
+        playerCamera.transform.position = Vector3.SmoothDamp(playerCamera.transform.position, targetPosition, ref cameraVelocity, 0.1f);
         playerCamera.transform.LookAt(cameraTarget);
     }
 
     void HandleCombat()
     {
         int weaponType = animator.GetInteger("WeaponType");
-
         if (Input.GetMouseButton(1))
         {
             EnterCombatMode();
@@ -190,7 +142,6 @@ public class CavePlayerBehaviour : MonoBehaviour
                 }
 
                 lastClickTime = Time.time;
-
                 if (clickCount == 1)
                 {
                     ExecuteSingleAttack();
@@ -202,19 +153,12 @@ public class CavePlayerBehaviour : MonoBehaviour
                 }
             }
         }
-
-      
-        if (PersistentObjectManager.instance != null)
-        {
-            PersistentObjectManager.instance.SetWeaponType(animator.GetInteger("WeaponType"));
-        }
     }
 
     void EnterCombatMode()
     {
         isInCombatMode = true;
         animator.SetBool("isInCombatMode", true);
-        
     }
 
     void ExitCombatMode()
@@ -229,20 +173,19 @@ public class CavePlayerBehaviour : MonoBehaviour
         animator.SetTrigger("SingleAttack");
         StartCoroutine(AttackAnimationLock(1f));
         StartCoroutine(ActivateAttackColliders());
-		
-		if (currentJar != null) 
-		{ 
+        
+        if (currentJar != null) 
+        { 
             Jar jarScript = currentJar.GetComponent<Jar>();
             if (jarScript != null)
             {
                 jarScript.Break();
             }
-		}
-
+        }
         
         if (currentEnemy != null)
         {
-            AttackEnemy(currentEnemy, attackDamage); 
+            AttackEnemy(currentEnemy, attackDamage);
         }
     }
 
@@ -252,15 +195,14 @@ public class CavePlayerBehaviour : MonoBehaviour
         animator.SetTrigger("ComboAttack");
         StartCoroutine(AttackAnimationLock(1f));
         StartCoroutine(ActivateAttackColliders());
-		if (currentJar != null) 
-		{ 
-			Jar jarScript = currentJar.GetComponent<Jar>();
+        if (currentJar != null) 
+        { 
+            Jar jarScript = currentJar.GetComponent<Jar>();
             if (jarScript != null)
             {
-                jarScript.Break(); 
+                jarScript.Break();
             }
-		}
-
+        }
         
         if (currentEnemy != null)
         {
@@ -293,13 +235,12 @@ public class CavePlayerBehaviour : MonoBehaviour
     {
         foreach (var collider in attackColliders)
         {
-            collider.enabled = false; 
+            collider.enabled = false;
         }
     }
 
     void AttackEnemy(GameObject enemy, float damage)
     {
-
         Enemy enemyScript = enemy.GetComponent<Enemy>();
         if (enemyScript != null)
         {
@@ -320,7 +261,6 @@ public class CavePlayerBehaviour : MonoBehaviour
         }
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
-
         Vector3 direction = new Vector3(horizontal, 0, vertical).normalized;
 
         if (controller.isGrounded)
@@ -331,7 +271,6 @@ public class CavePlayerBehaviour : MonoBehaviour
                 Quaternion targetRotation = Quaternion.Euler(0, targetAngle, 0);
 
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10);
-
                 Vector3 moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
                 moveDirection *= currentSpeed;
 
@@ -339,9 +278,7 @@ public class CavePlayerBehaviour : MonoBehaviour
 
                 controller.Move(moveDirection * Time.deltaTime);
                 UpdateAnimation(direction.magnitude, Input.GetKey(KeyCode.LeftShift));
-
                 footStepsAudioSource.pitch = (currentSpeed == runSpeed) ? 2f : (isInCombatMode ? 0.75f : 1f);
-
                 if (!footStepsAudioSource.isPlaying)
                 {
                     footStepsAudioSource.Play();
@@ -406,60 +343,47 @@ public class CavePlayerBehaviour : MonoBehaviour
 
     void CollectSword()
     {
-        if (PersistentObjectManager.instance != null)
-        {
-            PersistentObjectManager.instance.SetHasSword(true);
-            PersistentObjectManager.instance.SetHasSwordOnWall(false);
-        }
-
+        EventManager.TriggerWeaponCollected("Sword");
         sword_in_hand.SetActive(true);
         sword.SetActive(false);
-		AddWeapon("Sword");
-		PersistentObjectManager.instance.SetHasSword(true);
-		SwitchWeapon(WeaponType.Sword);
-
+        AddWeapon("Sword");
+        SwitchWeapon(WeaponType.Sword);
         int newWeaponType = 1; 
         animator.SetInteger("WeaponType", newWeaponType);
-
-
-        if (PersistentObjectManager.instance != null)
-        {
-            PersistentObjectManager.instance.SetWeaponType(newWeaponType);
-        }
-
         pickText.gameObject.SetActive(false);
-
-      
-        MissionManager missionManager = FindObjectOfType<MissionManager>();
-        if (missionManager != null)
-        {
-            missionManager.AdvanceMission();
-        }
         VoiceSwordTalk();
     }
     
-    void HandleWeaponChange()
+    void HandleWeaponSwitch()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha0))
+        if (Input.GetKeyDown(KeyCode.Alpha1) && hasFists)
         {
-          
-            PersistentObjectManager.instance.SetWeaponType(-1);
-            animator.SetInteger("WeaponType", -1);
+            SwitchWeapon(WeaponType.Fists);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha1) && PersistentObjectManager.instance.hasWeaponInHand)
+        else if (Input.GetKeyDown(KeyCode.Alpha2) && hasSword)
         {
-            
-            PersistentObjectManager.instance.SetWeaponType(0);
-            animator.SetInteger("WeaponType", 0);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha2) && PersistentObjectManager.instance.hasSwordInHand)
-        {
-         
-            PersistentObjectManager.instance.SetWeaponType(1);
-            animator.SetInteger("WeaponType", 1);
+            SwitchWeapon(WeaponType.Sword);
         }
     }
 
+    void SwitchWeapon(WeaponType weaponType)
+    {
+        currentWeapon = weaponType;
+        animator.SetInteger("WeaponType", (int)currentWeapon);
+        EventManager.TriggerWeaponSwitched((int)weaponType);
+    
+        if (currentWeapon == WeaponType.Sword)
+        {
+            sword_in_hand.SetActive(true);
+            attackDamage = 70f;
+        }
+        else
+        {
+            sword_in_hand.SetActive(false);
+            attackDamage = 20f;
+        }
+     }
+   
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Enemy"))
@@ -475,7 +399,7 @@ public class CavePlayerBehaviour : MonoBehaviour
             Enemy enemy = other.GetComponentInParent<Enemy>();
             if (enemy != null)
             {
-                TakeDamage(enemy.attackDamage); 
+                TakeDamage(enemy.attackDamage);
             }
         }
     }
@@ -484,7 +408,7 @@ public class CavePlayerBehaviour : MonoBehaviour
     {
         if (other.CompareTag("Enemy"))
         {
-            currentEnemy = null; 
+            currentEnemy = null;
         }
         else if (other.CompareTag("Jar"))
         {
@@ -494,19 +418,14 @@ public class CavePlayerBehaviour : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-    
         currentHP -= damage;
         if (currentHP < 0)
         {
             currentHP = 0;
         }
-    
-        PersistentObjectManager.instance.SetPlayerHP(currentHP);
-
+        EventManager.TriggerPlayerHealthChanged(currentHP);
         UpdateHPUI(); 
-	UpdateEdgeEffect();
-
-      
+        UpdateEdgeEffect();
         if (currentHP == 0)
         {
             Die();
@@ -519,12 +438,11 @@ public class CavePlayerBehaviour : MonoBehaviour
         StartCoroutine(WaitForDeathAnimation());
     }
 
-	void UpdateHPUI()
+    void UpdateHPUI()
     {
        if (hpSlider != null)
         {
             hpSlider.value = currentHP / maxHP;
-
             if (currentHP / maxHP >= 0.4f)
             {
                 hpSlider.fillRect.GetComponent<Image>().color = normalColor;
@@ -540,15 +458,11 @@ public class CavePlayerBehaviour : MonoBehaviour
         }
     }
 
-    
-
     IEnumerator WaitForDeathAnimation()
     {
         float deathAnimationTime = animator.GetCurrentAnimatorStateInfo(0).length;
         yield return new WaitForSeconds(deathAnimationTime);
-
         yield return StartCoroutine(FadeOut(fadeDuration));
-
         SceneManager.LoadScene("DeathScreen");
     }
 
@@ -566,23 +480,18 @@ public class CavePlayerBehaviour : MonoBehaviour
         }
     }
 
-	
-
-
-	IEnumerator BlinkEdgeEffect()
-        {
+    IEnumerator BlinkEdgeEffect()
+    {
         isBlinking = true;
         float blinkDuration = 0.5f; 
         float minAlpha = 0f;
         float maxAlpha = maxEdgeAlpha;
         bool increasing = true;
-    
         while (currentHP <= lowHpThreshold) 
         {
             float startAlpha = increasing ? minAlpha : maxAlpha;
             float endAlpha = increasing ? maxAlpha : minAlpha;
             float elapsedTime = 0f;
-    
             while (elapsedTime < blinkDuration)
             {
                 float alpha = Mathf.Lerp(startAlpha, endAlpha, elapsedTime / blinkDuration);
@@ -596,9 +505,9 @@ public class CavePlayerBehaviour : MonoBehaviour
     
         SetEdgeEffect(0f); 
         isBlinking = false;
-	}
+    }
 
-	void UpdateEdgeEffect()
+    void UpdateEdgeEffect()
     {
         if (currentHP <= lowHpThreshold)
         {
@@ -635,81 +544,45 @@ public class CavePlayerBehaviour : MonoBehaviour
     public void AddHealth(float healthToAdd)
     {
         currentHP = Mathf.Min(currentHP + healthToAdd, maxHP);
-        
-        PersistentObjectManager.instance.SetPlayerHP(currentHP);
-    
+        EventManager.TriggerPlayerHealthChanged(currentHP);
         UpdateHPUI();
     }
 
-	public void AddWeapon(string weaponName)
+    public void AddWeapon(string weaponName)
     {
         if (weaponName == "Fists" && !hasFists && !hasSword)
         {
             hasFists = true;
             SwitchWeapon(WeaponType.Fists);
             animator.SetInteger("WeaponType", (int)currentWeapon);
-			PersistentObjectManager.instance.SetHasFists(true);
+            EventManager.TriggerWeaponCollected("Fists");
         }
-        else if (weaponName == "Sword" && hasFists && !hasSword) /
+        else if (weaponName == "Sword" && hasFists && !hasSword)
         {
             hasSword = true;
             SwitchWeapon(WeaponType.Sword);
             animator.SetInteger("WeaponType", (int)currentWeapon);
-            PersistentObjectManager.instance.SetHasSword(true);
+            EventManager.TriggerWeaponCollected("Sword");
         }
     }
 
-    void HandleWeaponSwitch()
+    void VoiceSwordTalk()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1) && hasFists)
-        {
-            SwitchWeapon(WeaponType.Fists);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha2) && hasSword)
-        {
-            SwitchWeapon(WeaponType.Sword);
-        }
-    }
-
-    void SwitchWeapon(WeaponType weaponType)
-    {
-        currentWeapon = weaponType;
-        animator.SetInteger("WeaponType", (int)currentWeapon);
-        if (PersistentObjectManager.instance != null)
-        {
-            PersistentObjectManager.instance.SetWeaponType((int)weaponType);
-        }
-    
-        if (currentWeapon == WeaponType.Sword)
-        {
-            sword_in_hand.SetActive(true);
-	    attackDamage = 70f;
-        }
-        else
-        {
-            sword_in_hand.SetActive(false); 
-	    attackDamage = 20f;
-        }
-     }
-   
-
-	void VoiceSwordTalk()
-	{
-		if (voiceSword != null)
+        if (voiceSword != null)
         {
             audioSource.PlayOneShot(voiceSword);
-        }	
-	}
+        }   
+    }
 
-	public void VoiceForestTalk()
-	{
-		if (voiceForest != null)
-		{
-			audioSource.PlayOneShot(voiceForest);
-		}
-	}
+    public void VoiceForestTalk()
+    {
+        if (voiceForest != null)
+        {
+            audioSource.PlayOneShot(voiceForest);
+        }
+    }
 
-	IEnumerator RegenerateHealth()
+    IEnumerator RegenerateHealth()
     {
         while (currentHP < maxHP * 0.3f && !isInCombatMode)
         {
@@ -719,4 +592,3 @@ public class CavePlayerBehaviour : MonoBehaviour
         }
     }
 }
-	

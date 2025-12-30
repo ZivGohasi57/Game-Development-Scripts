@@ -8,7 +8,7 @@ public class GoldPickup : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            GoldManager.Instance.AddGold(goldAmount);  
+            EventManager.TriggerGoldCollected(goldAmount);  
             gameObject.SetActive(false); 
         }
     }

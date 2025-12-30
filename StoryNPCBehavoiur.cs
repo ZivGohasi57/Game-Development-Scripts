@@ -75,7 +75,7 @@ public class StoryNPCBehaviour : MonoBehaviour
         if (playerBehaviour != null)
         {
             playerBehaviour.CompleteInteractionWithNPC();
-            playerBehaviour.TriggerPlayerResponseAfterStory(); // Trigger the player response
+            playerBehaviour.TriggerPlayerResponseAfterStory(); 
 
             if (gateController != null)
             {

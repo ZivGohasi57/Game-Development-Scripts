@@ -12,7 +12,6 @@ public class GateController : MonoBehaviour
     public AudioClip selfTalk4;
 
     private PlayerBehaviour playerBehaviour;
-    private MissionManager missionManager;
     private bool messageDisplayed = false;
 
     public AudioSource selfTalkAudioSource;
@@ -23,8 +22,6 @@ public class GateController : MonoBehaviour
         {
             playerBehaviour = player.GetComponent<PlayerBehaviour>();
         }
-
-        missionManager = FindObjectOfType<MissionManager>();
     }
 
     void OnTriggerEnter(Collider other)
@@ -33,7 +30,8 @@ public class GateController : MonoBehaviour
         {
             if (canPassThrough && hasTalkedToNPC)
             {
-                missionManager.TriggerNextMission();
+                
+                EventManager.TriggerMissionAdvanced();
                 
                 if (gateCollider != null)
                 {

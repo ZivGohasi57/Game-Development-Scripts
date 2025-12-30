@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
+
 public class ScreenTransition : MonoBehaviour
 {
     public GameObject player;
@@ -14,7 +15,6 @@ public class ScreenTransition : MonoBehaviour
 
     private PlayerBehaviour playerBehaviour;
     private GateController gateController;
-    private MissionManager missionManager;
     private bool isTransitioning = false;
 
     private void Start()
@@ -30,8 +30,7 @@ public class ScreenTransition : MonoBehaviour
         }
 
         gateController = FindObjectOfType<GateController>();
-        missionManager = FindObjectOfType<MissionManager>();
-
+        
     }
 
     private void OnTriggerEnter(Collider other)
@@ -45,7 +44,6 @@ public class ScreenTransition : MonoBehaviour
     private IEnumerator FadeTransition()
     {
         isTransitioning = true;
-
         yield return StartCoroutine(FadeToBlack());
 
         currentPlayerModel.SetActive(false);
@@ -57,7 +55,6 @@ public class ScreenTransition : MonoBehaviour
         }
 
         playerBehaviour.HasChangedClothes = true;
-
         if (gateController != null)
         {
             gateController.SetCanPassThrough(true);
@@ -71,16 +68,13 @@ public class ScreenTransition : MonoBehaviour
     private IEnumerator PlaySelfTalkAfterDelay()
     {
         yield return new WaitForSeconds(3f);
-
         if (playerBehaviour.selfTalkAudioSource != null && selfTalk2 != null)
         {
             playerBehaviour.selfTalkAudioSource.PlayOneShot(selfTalk2);
             yield return new WaitForSeconds(selfTalk2.length);
             
-            if (missionManager != null)
-            {
-                missionManager.TriggerNextMission();
-            }
+            
+            EventManager.TriggerMissionAdvanced();
         }
 
         isTransitioning = false;

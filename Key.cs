@@ -15,7 +15,6 @@ public class Key : MonoBehaviour
 
     public Door linkedDoor;
     public Text interactionText;
-
     [Header("Messages")]
     public string messageOpenChest = "Press E to open chest";
     public string messageTakeKey = "Press E to take the key";
@@ -42,7 +41,6 @@ public class Key : MonoBehaviour
     private bool itemAvailable = false;
     private string generatedItemId;
 
-
     void Start()
     {
         generatedItemId = $"{gameObject.name}_{transform.position}";
@@ -51,7 +49,7 @@ public class Key : MonoBehaviour
         if (PersistentObjectManager.instance != null &&
             PersistentObjectManager.instance.IsContainerOpen(generatedItemId))
         {
-            SetChestOpenedState();  
+            SetChestOpenedState();
         }
 
         if (interactionText != null)
@@ -80,7 +78,6 @@ public class Key : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             isInRange = true;
-
             if (containerType == ContainerType.Chest && !chestOpened)
             {
                 ShowInteractionText(messageOpenChest);
@@ -157,21 +154,22 @@ public class Key : MonoBehaviour
             case ItemType.Key:
                 if (linkedDoor != null)
                 {
-                    linkedDoor.hasKey = true;    
+                    linkedDoor.hasKey = true;
                     if (audioSource != null && takeKeySound != null)
                     {
                         audioSource.PlayOneShot(takeKeySound);
                     }
                 }
                 break;
-    
+
             case ItemType.Gold:
-                GoldManager.Instance.AddGold(goldAmount);
-                Debug.Log($"אספת {goldAmount} זהב!");
+                
+                EventManager.TriggerGoldCollected(goldAmount);
+                Debug.Log($"Collected {goldAmount} gold!");
 
                 if (isBigTreasure)
                 {
-		    PlayerBehaviour player1 = FindObjectOfType<PlayerBehaviour>();
+                    PlayerBehaviour player1 = FindObjectOfType<PlayerBehaviour>();
                     if (player1 != null)
                     {
                         player1.StartTransitionToCredits();
@@ -182,9 +180,16 @@ public class Key : MonoBehaviour
                     audioSource.PlayOneShot(takeGoldSound);
                 }
                 break;
-    
-            case ItemType.Weapon:
 
+            case ItemType.Weapon:
+                
+                EventManager.TriggerWeaponCollected(weaponType.ToString());
+
+                
+                
+                
+                
+                
                 CavePlayerBehaviour player = FindObjectOfType<CavePlayerBehaviour>();
                 if (player != null)
                 {
@@ -198,26 +203,28 @@ public class Key : MonoBehaviour
                 break;
 
             case ItemType.Life:
-                CavePlayerBehaviour playerHealth = FindObjectOfType<CavePlayerBehaviour>();
-                if (playerHealth != null)
-                {
-                    playerHealth.AddHealth(lifeBoostAmount);
-                }
+                
+                
+                
+                
+                
+                float currentHP = PersistentObjectManager.instance.playerHP;
+                float newHP = Mathf.Min(currentHP + lifeBoostAmount, 100f); 
+                EventManager.TriggerPlayerHealthChanged(newHP);
 
                 if (audioSource != null && takeLifeSound != null)
                 {
                     audioSource.PlayOneShot(takeLifeSound);
                 }
                 break;
-		
         }
 
         interactionText.gameObject.SetActive(false);
         gameObject.SetActive(false);  
-        PersistentObjectManager.instance?.CollectItem(generatedItemId);
-}
-
-    
+        
+        
+        EventManager.TriggerItemCollected(generatedItemId);
+    }
 
     void SetChestOpenedState()
     {

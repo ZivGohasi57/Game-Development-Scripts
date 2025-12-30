@@ -5,7 +5,6 @@ using UnityEngine.UI;
 using System;   
 using TMPro;
 
-
 public class Enemy : MonoBehaviour
 {
     public string enemyId;
@@ -37,22 +36,16 @@ public class Enemy : MonoBehaviour
     public bool isFinalBoss = false;
     public AudioClip chaseSound; 
     private AudioSource audioSource;
-    private bool isChasing = false; 
+    private bool isChasing = false;
     public bool needToMakeMeTalk;
     public Color normalColor = Color.green;  
     public Color lowHpColor = Color.yellow; 
     public Color criticalHpColor = Color.red;
     public TMP_Text hpText; 
 
-
-
-
-
-
     void Start()
     {
-	audioSource = GetComponent<AudioSource>();
-        
+        audioSource = GetComponent<AudioSource>();
         if (audioSource != null && chaseSound != null)
         {
             audioSource.clip = chaseSound;
@@ -79,7 +72,6 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (isDead) return;
-
         if (enemyCanvas != null)
         {
             enemyCanvas.transform.LookAt(Camera.main.transform);
@@ -93,7 +85,7 @@ public class Enemy : MonoBehaviour
         {
             if (distanceToPlayer > attackRange && !isAttacking)
             {
-		StartChase();
+                StartChase();
                 MoveTowardsPlayer();
             }
             else if (distanceToPlayer <= attackRange && canAttack)
@@ -108,7 +100,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-	void StartChase()
+    void StartChase()
     {
         if (!isChasing)
         {
@@ -127,7 +119,7 @@ public class Enemy : MonoBehaviour
             isChasing = false;
             if (audioSource != null && audioSource.isPlaying)
             {
-                audioSource.Stop(); 
+                audioSource.Stop();
             }
         }
     }
@@ -152,7 +144,6 @@ public class Enemy : MonoBehaviour
 
     IEnumerator AttackPlayer()
     {
-        
         canAttack = false;
         animator.SetBool("isWalking", false);
         isAttacking = true;
@@ -164,7 +155,6 @@ public class Enemy : MonoBehaviour
         yield return new WaitForSeconds(1f);
     
         EnableAttackColliders();
-    
         yield return new WaitForSeconds(1f); 
     
         DisableAttackColliders();
@@ -195,14 +185,12 @@ public class Enemy : MonoBehaviour
         if (canBeHit)
         {
             targetHP -= damage;
-
             if (targetHP < 0)
             {
                 targetHP = 0;
             }
 
             StartCoroutine(UpdateHPWithDelay());
-
             if (targetHP == 0)
             {
                 Die();
@@ -216,37 +204,31 @@ public class Enemy : MonoBehaviour
     void Die()
     {
         isDead = true;
-
-     
         if (PersistentObjectManager.instance != null)
         {
             PersistentObjectManager.instance.SetEnemyDead(enemyId);
         }
 
-       
         animator.SetTrigger("die");
-
-       
         if (enemyCanvas != null)
         {
             enemyCanvas.enabled = false;
         }
 
         hitCollider.enabled = false;
-
-	if (taskDoor != null)
+        if (taskDoor != null)
         {
             taskDoor.taskCompleted = true;
             taskDoor.TryOpenDoor();
         }
 
-        if (isFinalBoss && PersistentObjectManager.instance != null)
+        if (isFinalBoss)
         {
-            PersistentObjectManager.instance.AdvanceMission();
+            EventManager.TriggerMissionAdvanced();
         }
 
-    	StartCoroutine(GradualStopChase());
-	if (isFinalBoss && needToMakeMeTalk)
+        StartCoroutine(GradualStopChase());
+        if (isFinalBoss && needToMakeMeTalk)
         {
             CavePlayerBehaviour player = FindObjectOfType<CavePlayerBehaviour>();
             if (player != null)
@@ -256,7 +238,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-	IEnumerator GradualStopChase()
+    IEnumerator GradualStopChase()
     {
         float delayTime = 2f;
         float initialVolume = audioSource.volume;
@@ -298,7 +280,6 @@ public class Enemy : MonoBehaviour
         if (hpSlider != null)
         {
             hpSlider.value = currentHP / maxHP;
-
             if (currentHP / maxHP >= 0.4f)
             {
                 hpSlider.fillRect.GetComponent<Image>().color = normalColor;
@@ -337,6 +318,4 @@ public class Enemy : MonoBehaviour
             }
         }
     }
-
-	
 }
